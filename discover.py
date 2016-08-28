@@ -160,8 +160,8 @@ lib.save_words()
 #display Catches
 lib.print_step("Print catches : %d" % len(catches))
 rss = PyRSS2Gen.RSS2(
-    title = config['output']['title']
-    link = config['output']['link']
+    title = config['output']['title'],
+    link = config['output']['link'],
     description = "Recommandations from newsdiscover",
     lastBuildDate = datetime.datetime.now(),
     )
