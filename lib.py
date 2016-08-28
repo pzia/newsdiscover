@@ -56,7 +56,7 @@ def clean(newtitle):
     return " ".join(words)
     
 def save_words():
-    with open('tmp/words.json.log', 'w') as outfile:
+    with open('logs/words.json.log', 'w') as outfile:
         json.dump(words_cleaned, outfile, sort_keys = True, indent = 4, ensure_ascii=False)
 
 def rss_extract(url, root = False):
