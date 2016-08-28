@@ -2,8 +2,8 @@
 #-*- coding:utf-8 -*-
 
 #mines
-import ocn
 import lib
+import ocn
 
 #built out
 import feedparser
@@ -20,7 +20,7 @@ import datetime
 import PyRSS2Gen
 
 #get config
-config = lib.get_config()
+config = lib.config
 
 #pocket library
 pocketreader = Pocket(
@@ -79,7 +79,7 @@ for k in pocket_list:
         pocket_rss_urls_set.add(f)
 
     #train !
-    train_list.append((lib.clean(title, config['badwords']), 'pocket'))
+    train_list.append((lib.clean(title), 'pocket'))
 
 # Fetch articles from ocn
 lib.print_step("Getting last {} OCN...".format(ocn_qty))
@@ -94,7 +94,7 @@ while (count < ocn_qty) :
         deco = ""
         oldest = min(i['id'], oldest)
         count += 1
-        i['cleaned_title'] = lib.clean(i['title'], config['badwords'])
+        i['cleaned_title'] = lib.clean(i['title'])
         ocn_urls_set.add(i['url'])
         if lib.is_url(i['guid']) :
             ocn_urls_set.add(i['guid'])
@@ -142,7 +142,7 @@ for u in pocket_rss_urls_set :
         f = feedparser.parse(r.text)
         print("FEED:\t{}".format(u))
         for e in f['items'] :
-            cc = lib.clean(e['title'], config['badwords'])
+            cc = lib.clean(e['title'])
             c = cl.classify(cc)
             print("{}\t{}\n\turl:\t{}\n\tcleaned:\t{}".format(c, e['title'], e['link'], cc))
             if c == "pocket" and e['link'] not in catches_urls_set:

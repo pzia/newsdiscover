@@ -7,7 +7,7 @@ import json
 import logging
 import lib
 
-config = lib.get_config()
+config = lib.config
 
 
 ocn_user = config['ocn']['user']
