@@ -9,13 +9,17 @@ import logging
 from bs4 import BeautifulSoup, UnicodeDammit
 import random
 
-def get_json(fname):
+def get_json(fname, k = None):
     with open(fname) as f :
         d = json.load(f)
-    return d
+    if k == None :
+        return d
+    else :
+        return d[k]
 
 config = get_json('config.json')
-badwords = get_json('datas/badwords.json')
+badwords = get_json(config['badwords']['filename'], 'badwords')
+
 words_cleaned = {}
 
 
@@ -36,9 +40,10 @@ def is_url(u):
     return u[0:4] == 'http'
 
 def clean(newtitle):
+
     newtitle = strip_html(newtitle)
     newtitle = newtitle.lower() #lowercase
-    for c in " \n\t.,;?!:()[]{}+#$%--_/ť='\"’–«»‘“": #remove punctuation FIXME : use french parser ?
+    for c in " \n\t.,;?!:()[]{}+#$€%--_/ť='\"’–«»‘“": #remove punctuation FIXME : use french parser ?
         newtitle = newtitle.replace(c, " ")
         newtitle = newtitle.replace("  ", " ")
     #remove badwords - split, remove, join
