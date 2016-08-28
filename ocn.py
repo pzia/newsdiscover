@@ -5,15 +5,15 @@ import requests
 import urllib.parse
 import json
 import logging
-import mylib
+import lib
 
-config = mylib.get_config()
+config = lib.get_config()
 
 
 ocn_user = config['ocn']['user']
-ocn_pwd = config['ocn']['pass']
+ocn_pwd = config['ocn']['password']
 ocn_url = config['ocn']['url']
-ocn_news_base_api = config['ocn']['api']
+ocn_news_base_api = config['ocn']['base_api']
 
 def get_url(route):
     logging.debug("Get url for route %s" % route)

@@ -3,7 +3,7 @@
 
 #mines
 import ocn
-import mylib
+import lib
 
 #built out
 import feedparser
@@ -15,12 +15,12 @@ import logging
 import requests
 import requests_cache
 #monkey patching... FIXME use CacheControl
-requests_cache.install_cache('.cache', backend='sqlite', expire_after=6*3600)
+requests_cache.install_cache('tmp/cache', backend='sqlite', expire_after=6*3600)
 import datetime
 import PyRSS2Gen
 
 #get config
-config = mylib.get_config()
+config = lib.get_config()
 
 #pocket library
 pocketreader = Pocket(
@@ -40,10 +40,10 @@ catches = [] #pocket candidates
 
 #parms FIXME : to config ?
 catch_qty = 100
-pocket_qty = 200
-ocn_qty = 500
-ocn_chunk = 50
-ocn_headers = {"User-Agent" : mylib.load_user_agents()}
+pocket_qty = config['pocket']['qty']
+ocn_qty = config['ocn']['qty']
+ocn_chunk = config['ocn']['chunk']
+ocn_headers = {"User-Agent" : lib.load_user_agents(config['crawler']['ua_filename'])}
 ocn_params = {
     "batchSize": ocn_chunk,
     "type": 3, #the type of the query (Feed: 0, Folder: 1, Starred: 2, All: 3)
@@ -53,7 +53,7 @@ ocn_params = {
 
 
 # Fetch a list of articles from pocket
-mylib.print_step("Getting last {} Pocket...".format(pocket_qty))
+lib.print_step("Getting last {} Pocket...".format(pocket_qty))
 with requests_cache.disabled():
     pocket_list = pocketreader.retrieve(offset=0, count=pocket_qty, state="all")['list']
 for k in pocket_list:
@@ -73,30 +73,30 @@ for k in pocket_list:
     print("*\t{}\n\turl:\t{}".format(title, url))
 
     #extract rss from urls
-    feeds = mylib.rss_extract(url = url)
+    feeds = lib.rss_extract(url = url)
     for f in feeds :
         print("\tfeed:\t{}".format(f))
         pocket_rss_urls_set.add(f)
 
     #train !
-    train_list.append((mylib.clean(title, config['badwords']), 'pocket'))
+    train_list.append((lib.clean(title, config['badwords']), 'pocket'))
 
 # Fetch articles from ocn
-mylib.print_step("Getting last {} OCN...".format(ocn_qty))
+lib.print_step("Getting last {} OCN...".format(ocn_qty))
 oldest = 100000
 count = 0
 while (count < ocn_qty) :
     ocn_params['offset'] = oldest
-    mylib.print_step("Calling chunk of {}, already {} done ***".format(ocn_chunk, count))
+    lib.print_step("Calling chunk of {}, already {} done ***".format(ocn_chunk, count))
     with requests_cache.disabled():
         items = ocn.api_get("items", params = ocn_params, headers = ocn_headers)
     for i in items :
         deco = ""
         oldest = min(i['id'], oldest)
         count += 1
-        i['cleaned_title'] = mylib.clean(i['title'], config['badwords'])
+        i['cleaned_title'] = lib.clean(i['title'], config['badwords'])
         ocn_urls_set.add(i['url'])
-        if mylib.is_url(i['guid']) :
+        if lib.is_url(i['guid']) :
             ocn_urls_set.add(i['guid'])
         if not i['unread'] :
             deco += "r"
@@ -113,27 +113,27 @@ while (count < ocn_qty) :
                 train_list.append((i['cleaned_title'], 'trash'))
         print("{}\t{}\n\turl:\t{}".format(deco, i['title'], i['url']))
 
-mylib.print_step("Matches for the record: %d" % len(matches))
+lib.print_step("Matches for the record: %d" % len(matches))
 for m in matches :
     print("{}\t{}\n\turl:\t{}".format(m['id'], m['title'], m['url']))
 
 #Training
-mylib.print_step("Training with {}".format(len(train_list)))
+lib.print_step("Training with {}".format(len(train_list)))
 cl = NaiveBayesClassifier(train_list)
 
 #Catch with NEW from OCN
-mylib.print_step("Catching from {} unread ones".format(len(test_list)))
+lib.print_step("Catching from {} unread ones".format(len(test_list)))
 for i in test_list :
     c = cl.classify(i['cleaned_title'])
     print("{}\t{}\n\turl:\t{}\n\tcleaned:\t{}".format(c, i['title'], i['url'], i['cleaned_title']))
     if c == "pocket" and i['url'] not in catches_urls_set and i['guid'] not in catches_urls_set :
         catches.append(i)
         catches_urls_set.add(i['url'])
-        if mylib.is_url(i['guid']) :
+        if lib.is_url(i['guid']) :
             catches_urls_set.add(i['guid'])
 
 #Catch with items from feeds
-mylib.print_step("Catching from {} discovered feeds".format(len(pocket_rss_urls_set)))
+lib.print_step("Catching from {} discovered feeds".format(len(pocket_rss_urls_set)))
 for u in pocket_rss_urls_set :
     if catch_qty < 0 :
         break
@@ -142,40 +142,40 @@ for u in pocket_rss_urls_set :
         f = feedparser.parse(r.text)
         print("FEED:\t{}".format(u))
         for e in f['items'] :
-            cc = mylib.clean(e['title'], config['badwords'])
+            cc = lib.clean(e['title'], config['badwords'])
             c = cl.classify(cc)
             print("{}\t{}\n\turl:\t{}\n\tcleaned:\t{}".format(c, e['title'], e['link'], cc))
             if c == "pocket" and e['link'] not in catches_urls_set:
                 catches_urls_set.add(e['link'])
-                if "guid" in e and mylib.is_url(e['guid']) :
+                if "guid" in e and lib.is_url(e['guid']) :
                     catches_urls_set.add(e['guid'])
                 catches.append(e)
                 catch_qty -= 1
     except :
         print("\nEXCEPTION in requesting %s\n\n" % u)
 
-mylib.print_step("Save words")
-mylib.save_words()
+lib.print_step("Save words")
+lib.save_words()
 
 #display Catches
-mylib.print_step("Print catches : %d" % len(catches))
+lib.print_step("Print catches : %d" % len(catches))
 rss = PyRSS2Gen.RSS2(
-    title = "HB recommends",
-    link = "http://hugues.clement-bernard.fr",
-    description = "Recommandations",
+    title = config['output']['title']
+    link = config['output']['link']
+    description = "Recommandations from newsdiscover",
     lastBuildDate = datetime.datetime.now(),
     )
 
 for m in catches :
-    title = mylib.get_mixed_dict(m, 'title', default="No Title")
-    title = mylib.strip_html(title)
-    url = mylib.get_mixed_dict(m, 'url', 'link')
-    guid = mylib.get_mixed_dict(m, 'guid', default=url)
-    description = mylib.get_mixed_dict(m, 'description', 'content')
-    summary = mylib.get_mixed_dict(m, 'description', 'summary', default=description)
-    published = mylib.get_mixed_dict(m, 'published', 'updated', 'created', default=datetime.datetime.now())
+    title = lib.get_mixed_dict(m, 'title', default="No Title")
+    title = lib.strip_html(title)
+    url = lib.get_mixed_dict(m, 'url', 'link')
+    guid = lib.get_mixed_dict(m, 'guid', default=url)
+    description = lib.get_mixed_dict(m, 'description', 'content')
+    summary = lib.get_mixed_dict(m, 'description', 'summary', default=description)
+    published = lib.get_mixed_dict(m, 'published', 'updated', 'created', default=datetime.datetime.now())
 
-    if url in ocn_urls_set or (mylib.is_url(guid) and guid in ocn_urls_set) :
+    if url in ocn_urls_set or (lib.is_url(guid) and guid in ocn_urls_set) :
         new = "OCN"
     elif url not in pocket_urls_set and guid not in pocket_urls_set :
         new = "CATCH"
@@ -192,7 +192,7 @@ for m in catches :
     print("{}\t{}\n\turl:\t{}\n\t{}\n\t{}".format(new, m['title'], url, guid, published))
     
 #generate RSS
-mylib.print_step("Generate RSS")
-rss.write_xml(open("my.rss.xml", "w"), encoding = "utf-8")
+lib.print_step("Generate RSS")
+rss.write_xml(open("tmp/my.rss.xml", "w"), encoding = "utf-8")
 
 

@@ -90,7 +90,7 @@ def rss_extract(url, root = False):
             feeds += rss_extract(details_url.scheme+"://"+details_url.netloc, True)
     return feeds
 
-def load_user_agents(uafile="user_agents.txt"):
+def load_user_agents(uafile="datas/user_agents.txt"):
     """
     uafile : string
         path to text file of user agents, one per line
