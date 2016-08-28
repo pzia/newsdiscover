@@ -9,7 +9,15 @@ import logging
 from bs4 import BeautifulSoup, UnicodeDammit
 import random
 
+def get_json(fname):
+    with open(fname) as f :
+        d = json.load(f)
+    return d
+
+config = get_json('config.json')
+badwords = get_json('datas/badwords.json')
 words_cleaned = {}
+
 
 def strip_html(html):
     soup = BeautifulSoup(html, "lxml")
@@ -17,11 +25,6 @@ def strip_html(html):
 
 def print_step(s):
     print("\n===\t"+s)
-
-def get_config(fname = 'config.json'):
-    with open(fname) as f :
-        config = json.load(f)
-    return config
 
 def get_mixed_dict(obj, *args, default=None):
     for a in args:
@@ -32,7 +35,7 @@ def get_mixed_dict(obj, *args, default=None):
 def is_url(u):
     return u[0:4] == 'http'
 
-def clean(newtitle, badwords):
+def clean(newtitle):
     newtitle = strip_html(newtitle)
     newtitle = newtitle.lower() #lowercase
     for c in " \n\t.,;?!:()[]{}+#$%--_/ť='\"’–«»‘“": #remove punctuation FIXME : use french parser ?
