@@ -135,8 +135,6 @@ for i in test_list :
 #Catch with items from feeds
 lib.print_step("Catching from {} discovered feeds".format(len(pocket_rss_urls_set)))
 for u in pocket_rss_urls_set :
-    if catch_qty < 0 :
-        break
     try :
         r = requests.get(u)
         f = feedparser.parse(r.text)
@@ -150,7 +148,6 @@ for u in pocket_rss_urls_set :
                 if "guid" in e and lib.is_url(e['guid']) :
                     catches_urls_set.add(e['guid'])
                 catches.append(e)
-                catch_qty -= 1
     except :
         print("\nEXCEPTION in requesting %s\n\n" % u)
 
@@ -166,14 +163,19 @@ rss = PyRSS2Gen.RSS2(
     lastBuildDate = datetime.datetime.now(),
     )
 
-for m in catches :
+#for m in catches :
+now = datetime.datetime.now()
+for m in sorted(catches, key=str(lib.get_mixed_dict(m, 'published', 'updated', 'created', default=now)), reverse=True):
+    if catch_qty < 0 :
+        break
+
     title = lib.get_mixed_dict(m, 'title', default="No Title")
     title = lib.strip_html(title)
     url = lib.get_mixed_dict(m, 'url', 'link')
     guid = lib.get_mixed_dict(m, 'guid', default=url)
     description = lib.get_mixed_dict(m, 'description', 'content')
     summary = lib.get_mixed_dict(m, 'description', 'summary', default=description)
-    published = lib.get_mixed_dict(m, 'published', 'updated', 'created', default=datetime.datetime.now())
+    published = lib.get_mixed_dict(m, 'published', 'updated', 'created', default=now)
 
     if url in ocn_urls_set or (lib.is_url(guid) and guid in ocn_urls_set) :
         new = "OCN"
@@ -187,6 +189,8 @@ for m in catches :
             guid = guid
             )
         rss.items.append(item)
+        catch_qty -= 1
+
     else :
         new = "..."
     print("{}\t{}\n\turl:\t{}\n\t{}\n\t{}".format(new, m['title'], url, guid, published))
