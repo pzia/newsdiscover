@@ -15,7 +15,7 @@ import logging
 import requests
 import requests_cache
 #monkey patching... FIXME use CacheControl
-requests_cache.install_cache('tmp/cache', backend='sqlite', expire_after=6*3600)
+requests_cache.install_cache('tmp/cache', backend='sqlite', expire_after=12*3600)
 import datetime
 import PyRSS2Gen
 
@@ -165,7 +165,7 @@ rss = PyRSS2Gen.RSS2(
 
 #for m in catches :
 now = datetime.datetime.now()
-for m in sorted(catches, key=str(lib.get_mixed_dict(m, 'published', 'updated', 'created', default=now)), reverse=True):
+for m in sorted(catches, key=lambda x : str(lib.get_mixed_dict(x, 'published', 'updated', 'created', default=now)), reverse=True):
     if catch_qty < 0 :
         break
 
