@@ -66,9 +66,10 @@ def input_pocket(item):
     return item
 
 # Fetch a list of articles from pocket
-lib.print_step("Getting last {} Pocket...".format(pocket_qty))
+lib.print_step("Getting last {} Pocket..., training with {}".format(pocket_qty*2, pocket_qty))
+count_pocket = 0
 with requests_cache.disabled():
-    pocket_list = pocketreader.retrieve(offset=0, count=pocket_qty, state="all")['list']
+    pocket_list = pocketreader.retrieve(offset=0, count=pocket_qty*2, state="all")['list']
 with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
     future_to_item = {}
     for k in pocket_list:
@@ -87,8 +88,10 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
                 print("\tfeed:\t{}".format(f))
                 pocket_rss_urls_set.add(f)
 
-            #train ! - CPU bound, should be second stage
-            train_list.append((lib.clean(newitem['resolved_title']), 'pocket'))
+            count_pocket += 1
+            if count_pocket < pocket_qty:
+                #train ! - CPU bound, should be second stage
+                train_list.append((lib.clean(newitem['resolved_title']), 'pocket'))
 
 # Fetch articles from ocn
 lib.print_step("Getting last {} OCN...".format(ocn_qty))
@@ -142,23 +145,38 @@ for i in test_list :
             catches_urls_set.add(i['guid'])
 
 #Catch with items from feeds
+
 lib.print_step("Catching from {} discovered feeds".format(len(pocket_rss_urls_set)))
-for u in pocket_rss_urls_set :
-    try :
-        r = requests.get(u)
-        f = feedparser.parse(r.text)
-        print("FEED:\t{}".format(u))
-        for e in f['items'] :
-            cc = lib.clean(e['title'])
-            c = cl.classify(cc)
-            print("{}\t{}\n\turl:\t{}\n\tcleaned:\t{}".format(c, e['title'], e['link'], cc))
-            if c == "pocket" and e['link'] not in catches_urls_set:
-                catches_urls_set.add(e['link'])
-                if "guid" in e and lib.is_url(e['guid']) :
-                    catches_urls_set.add(e['guid'])
-                catches.append(e)
-    except :
-        print("\nEXCEPTION in requesting %s\n\n" % u)
+
+def input_feed(url):
+    r = requests.get(url)
+    f = feedparser.parse(r.text)
+    return f['items']
+    
+with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
+    future_to_item = {}
+    for u in pocket_rss_urls_set :
+        future_to_item[executor.submit(input_feed, u)] = u
+    for future in concurrent.futures.as_completed(future_to_item):
+        u = future_to_item[future]
+        try:
+            items = future.result()
+        except Exception as exc:
+            print('%s generated an exception: %s' % (u, exc))
+        else:
+            #should package chunk of items and submit to processpool
+            print("FEED:\t{}".format(u))
+            for e in items :
+                if e['link'] in catches_urls_set:
+                    continue
+                cc = lib.clean(e['title'])
+                c = cl.classify(cc)
+                print("{}\t{}\n\turl:\t{}\n\tcleaned:\t{}".format(c, e['title'], e['link'], cc))
+                if c == "pocket" :
+                    catches_urls_set.add(e['link'])
+                    if "guid" in e and lib.is_url(e['guid']) :
+                        catches_urls_set.add(e['guid'])
+                    catches.append(e)
 
 lib.print_step("Save words")
 lib.save_words()
