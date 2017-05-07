@@ -28,6 +28,7 @@ pocketreader = Pocket(
     access_token = config['pocket']['access_token']
 )
 
+#print(dir(pocketreader))
 #datas
 pocket_urls_set = set() #urls from pocket articles
 pocket_rss_urls_set = set() #rss extracted from pocket url
@@ -55,7 +56,7 @@ ocn_params = {
 # Fetch a list of articles from pocket
 lib.print_step("Getting last {} Pocket...".format(pocket_qty))
 with requests_cache.disabled():
-    pocket_list = pocketreader.retrieve(offset=0, count=pocket_qty, state="all")['list']
+    pocket_list = pocketreader.get(offset=0, count=pocket_qty, state="all")[0]['list']
 for k in pocket_list:
     item = pocket_list[k]
     #both urls are stored for better matching
