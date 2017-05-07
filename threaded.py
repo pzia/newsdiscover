@@ -31,6 +31,24 @@ pocketreader = Pocket(
     access_token = config['pocket']['access_token']
 )
 
+
+class Article(object):
+    def __init__(self):
+        super().__init__()
+        self.canonical = ""
+        self.urls = set()
+        self.title = ""
+        self.cleaned_title = ""
+        self.feeds = set()
+        self.description = ""
+        self.published = "" 
+        self.source = ""
+
+class PocketArticle(Article):
+    def __init__(self, datas):
+        super().__init__()
+        
+
 #datas
 pocket_urls_set = set() #urls from pocket articles
 pocket_rss_urls_set = set() #rss extracted from pocket url
