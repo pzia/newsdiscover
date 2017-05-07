@@ -105,9 +105,10 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
             for f in newitem['feeds'] :
                 print("\tfeed:\t{}".format(f))
                 pocket_rss_urls_set.add(f)
+
             count_pocket += 1
             if count_pocket < pocket_qty:
-                #train !
+                #train ! - CPU bound, should be second stage
                 train_list.append((lib.clean(newitem['resolved_title']), 'pocket'))
 
 # Fetch articles from ocn
