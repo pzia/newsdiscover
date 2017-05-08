@@ -88,7 +88,6 @@ lib.print_step("Getting last {} Pocket..., training with {}".format(pocket_qty*2
 count_pocket = 0
 with requests_cache.disabled():
     pget = pocketreader.get(offset=0, count=pocket_qty*2, state="all")
-    print(pget)
     pocket_list = pget[0]['list']
 with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
     future_to_item = {}
